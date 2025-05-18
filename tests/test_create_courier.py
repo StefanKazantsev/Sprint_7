@@ -1,0 +1,99 @@
+import pytest
+import requests
+import allure
+from test_data import Urls
+from src.courier import CourierClass
+from helpers import DataHelpers
+
+class TestCreateCourier:
+
+    @allure.title('Проверка создание курьера')
+    def test_create_courier(self):
+
+        login_pass = CourierClass()
+        status_code, response = login_pass.register_new_courier_and_return_lp()
+
+        assert response == {'ok': True} and status_code == 201
+
+
+    @allure.title('Проверка нельзя создать 2х одинаковых курьеров')
+    def test_double_create_courier(self):
+
+        test_create_two_identical_couriers = DataHelpers()
+        login_pass = test_create_two_identical_couriers.login_pass_name_courier_dto()
+
+        response1 = requests.post(f"{Urls.base_url}{Urls.api_create_courier}", data=login_pass)
+        response2 = requests.post(f"{Urls.base_url}{Urls.api_create_courier}", data=login_pass)
+
+        assert response1.status_code == 201 and response1.json() == {'ok': True}
+        assert response2.status_code == 409 and response2.json() == {'code': 409, 'message': 'Этот логин уже используется. Попробуйте другой.'}
+
+
+    @pytest.mark.parametrize("missing_field", [
+        "login",
+        "password"
+    ])
+    @allure.title('Проверка создания курьера при передаче всех обязательных полей - {missing_field}')
+    def test_all_field_create_courier(self,missing_field):
+
+        test_create_courier_with_required_fields = DataHelpers()
+        login_pass = test_create_courier_with_required_fields.login_pass_name_courier_dto()
+        login_pass.pop(missing_field)
+        response = requests.post(f"{Urls.base_url}{Urls.api_create_courier}", data=login_pass)
+
+        assert response.status_code == 400 and response.json() == {'code': 400, 'message': 'Недостаточно данных для создания учетной записи'}
+
+
+
+    @allure.title('Проверка создание курьера, запрос возвращает правильный код ответа')
+    def test_201_create_courier(self):
+
+        test_create_courier_return_successfully_code = DataHelpers()
+
+        response = requests.post(f"{Urls.base_url}{Urls.api_create_courier}", data=test_create_courier_return_successfully_code.login_pass_name_courier_dto())
+
+        assert response.status_code == 201 and response.json() == {'ok': True}
+
+
+    @allure.title('Проверка создание курьера, успешный запрос возвращает "ok":true')
+    def test_create_courier_ok_response(self):
+
+        test_create_courier_return_successfully_message = DataHelpers()
+
+        response = requests.post(f"{Urls.base_url}{Urls.api_create_courier}", data=test_create_courier_return_successfully_message.login_pass_name_courier_dto())
+        assert response.status_code == 201 and response.json() == {'ok': True}
+
+
+    @pytest.mark.parametrize("missing_field", [
+        "login",
+        "password"
+    ])
+    @allure.title('Проверка создание курьера, если нет 1 поля, ломается создание')
+    def test_create_courier_no_all_fields(self,missing_field):
+
+        test_create_courier_with_blank_field = DataHelpers()
+        login_pass = test_create_courier_with_blank_field.login_pass_name_courier_dto()
+        login_pass.pop(missing_field)
+
+        response = requests.post(f"{Urls.base_url}{Urls.api_create_courier}", data=login_pass)
+
+        assert response.status_code == 400 and response.json() == {'code': 400, 'message': 'Недостаточно данных для создания учетной записи'}
+
+
+    @allure.title('Проверка создание курьера, если создать пользователя с логином, который уже есть, возвращается ошибка.')
+    def test_create_courier_double_login(self):
+
+        test_create_courier_with_taken_login = DataHelpers()
+        login_pass = test_create_courier_with_taken_login.login_pass_name_courier_dto()
+
+        payload2 = {
+            "login": login_pass['login'],
+            "password": login_pass['password']+'1',
+            "firstName": login_pass['firstName']+'1'
+        }
+
+        response = requests.post(f"{Urls.base_url}{Urls.api_create_courier}", data=login_pass)
+        response2 = requests.post(f"{Urls.base_url}{Urls.api_create_courier}", data=payload2)
+
+        assert response.status_code == 201 and response.json() == {'ok': True}
+        assert response2.status_code == 409 and response2.json() == {'code': 409, 'message': 'Этот логин уже используется. Попробуйте другой.'}
