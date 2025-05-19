@@ -1,29 +1,21 @@
 from src.courier import CourierClass
 import allure
+from responses import ApiResponses
 
 class TestLoginCourier:
 
-    def check_courier_login(self):
+    @allure.title('курьер может авторизоваться, для авторизации нужно передать все обязательные поля, успешный запрос возвращает id')
+    def test_login_courier(self):
 
         login_pass = CourierClass()
         status_code, response = login_pass.login_courier()
 
-        assert status_code == 200 and 'id' in response, "Курьер не может авторизоваться или id не найден"
+        assert status_code == 200 and 'id' in response, ApiResponses.COURIER_AUTH_FAILED
 
         courier_id = response['id']
         login_pass.delete_courier(courier_id)
 
         return status_code, response
-
-    @allure.title('курьер может авторизоваться')
-    def test_login_courier(self):
-
-        self.check_courier_login()
-
-    @allure.title('для авторизации нужно передать все обязательные поля')
-    def test_login_courier_all_fields(self):
-
-        self.check_courier_login()
 
     @allure.title('система вернёт ошибку, если неправильно указать логин или пароль')
     def test_login_courier_error_fields(self):
@@ -31,7 +23,7 @@ class TestLoginCourier:
         login_pass = CourierClass()
         status_code, response = login_pass.login_courier_error_fields()
 
-        assert status_code == 404 and  response == {'code': 404, 'message': 'Учетная запись не найдена'}
+        assert status_code == 404 and  response == ApiResponses.ACCOUNT_NOT_FOUND
 
 
     @allure.title('если какого-то поля нет, запрос возвращает ошибку')
@@ -48,11 +40,4 @@ class TestLoginCourier:
         login_pass = CourierClass()
         status_code, response = login_pass.login_courier_non_user()
 
-        assert status_code == 404 and response == {'code': 404, 'message': 'Учетная запись не найдена'}
-
-
-    @allure.title('успешный запрос возвращает id')
-    def test_login_courier_ok_id(self):
-
-        status_code, response = self.check_courier_login()
-        assert status_code == 200 and 'id' in response, "Успешный запрос не вернул id"
+        assert status_code == 404 and response == ApiResponses.ACCOUNT_NOT_FOUND
